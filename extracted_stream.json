@@ -1,6 +1,5 @@
 {
-    "m3u8_url": null,
+    "m3u8_url": "https://mut001.myturn1.top:8088/live/webcricn04/playlist.m3u8?id=114607&pk=77fe6bd7594b645f3e825e4ec2ac3e51f74d5f870e290aab777d4a9e0f16f414f2a046e5f24f609b888db9ac3347248762bd39bd2568c3f183cd16a241e8eca1",
     "referer": "https://webcric.im/",
-    "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36",
-    "status": "No m3u8 stream detected or channel offline."
+    "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36"
 }
