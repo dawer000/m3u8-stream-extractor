@@ -1,25 +1,23 @@
 import asyncio
 import json
-import os
+import re
 from playwright.async_api import async_playwright
 
+# Target streaming page
 TARGET_URL = "https://webcric.im/frame1.htm"
 
 async def main():
     async with async_playwright() as p:
-        print("[+] Launching Headless Chromium Browser...")
+        print("[+] Launching Browser...")
         
-        # Enhanced args to bypass headless/bot detection on Linux runners
-        browser = await p.chromium.launch(
-            headless=True,
-            args=[
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-blink-features=AutomationControlled",
-                "--disable-web-security"
-            ]
-        )
+        # System me installed Chrome use hoga taake Playwright Chromium download error na aaye
+        try:
+            browser = await p.chromium.launch(headless=True, channel="chrome")
+        except Exception:
+            # Fallback to default Playwright browser
+            browser = await p.chromium.launch(headless=True)
 
+        # Mobile Device Emulation Settings
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36",
             viewport={"width": 390, "height": 844},
@@ -36,8 +34,10 @@ async def main():
             "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36"
         }
 
-        # Catch both request and response to ensure no m3u8 call is missed
-        def handle_network(url):
+        # Network Traffic Listener (Stream Detector Logic)
+        def on_request(request):
+            url = request.url
+            # Detect .m3u8 index or playlist calls
             if ".m3u8" in url and not detected_data["m3u8_url"]:
                 detected_data["m3u8_url"] = url
                 print("\n==================================================")
@@ -45,24 +45,27 @@ async def main():
                 print(f"URL: {url}")
                 print("==================================================\n")
 
-        page.on("request", lambda req: handle_network(req.url))
-        page.on("response", lambda res: handle_network(res.url))
+        # Network Interceptor Event Attach
+        page.on("request", on_request)
 
         print(f"[+] Navigating to {TARGET_URL}...")
         try:
-            await page.goto(TARGET_URL, wait_until="networkidle", timeout=35000)
-            print("[+] Page loaded. Triggering user interactions...")
+            # Load page & allow scripts to execute
+            await page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=25000)
             
-            await asyncio.sleep(3)
+            print("[+] Triggering player interactions...")
+            await asyncio.sleep(2)
 
-            # Try clicking center of screen to trigger player JS
+            # Auto-click overlay/play button if media player requires tap to stream
             try:
-                await page.mouse.click(195, 422)
+                await page.mouse.click(195, 422)  # Screen center click
             except Exception:
                 pass
 
-            # Wait up to 15 seconds for m3u8 requests
-            for _ in range(15):
+            print("[+] Waiting for network streams...")
+            
+            # Poll for up to 10 seconds until stream request fires
+            for i in range(10):
                 if detected_data["m3u8_url"]:
                     break
                 await asyncio.sleep(1)
@@ -72,14 +75,14 @@ async def main():
 
         await browser.close()
 
-        # Always create the output JSON file so GitHub Artifacts never fails
-        if not detected_data["m3u8_url"]:
-            print("[-] No active .m3u8 found. Outputting fallback status.")
-            detected_data["status"] = "No m3u8 stream detected or channel offline."
-
-        with open("extracted_stream.json", "w") as f:
-            json.dump(detected_data, f, indent=4)
-        print("[+] Output written to 'extracted_stream.json'")
+        # Output Results
+        if detected_data["m3u8_url"]:
+            # Save extracted details to a local JSON file
+            with open("extracted_stream.json", "w") as f:
+                json.dump(detected_data, f, indent=4)
+            print("[+] Details saved to 'extracted_stream.json'")
+        else:
+            print("[-] No active .m3u8 request detected. Channel might be offline or stream dynamically obfuscated.")
 
 if __name__ == "__main__":
     asyncio.run(main())
