@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from playwright.async_api import async_playwright
 
 TARGET_URL = "https://webcric.im/frame1.htm"
@@ -8,13 +9,17 @@ async def main():
     async with async_playwright() as p:
         print("[+] Launching Headless Chromium Browser...")
         
-        # GitHub Actions/Linux environment ke liye optimal headless browser launch
+        # Enhanced args to bypass headless/bot detection on Linux runners
         browser = await p.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox"]
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-web-security"
+            ]
         )
 
-        # Mobile Device Emulation Settings
         context = await browser.new_context(
             user_agent="Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36",
             viewport={"width": 390, "height": 844},
@@ -31,9 +36,8 @@ async def main():
             "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36"
         }
 
-        # Network Traffic Listener (Stream Detector Logic)
-        def on_request(request):
-            url = request.url
+        # Catch both request and response to ensure no m3u8 call is missed
+        def handle_network(url):
             if ".m3u8" in url and not detected_data["m3u8_url"]:
                 detected_data["m3u8_url"] = url
                 print("\n==================================================")
@@ -41,26 +45,24 @@ async def main():
                 print(f"URL: {url}")
                 print("==================================================\n")
 
-        # Network Interceptor Event Attach
-        page.on("request", on_request)
+        page.on("request", lambda req: handle_network(req.url))
+        page.on("response", lambda res: handle_network(res.url))
 
         print(f"[+] Navigating to {TARGET_URL}...")
         try:
-            await page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=25000)
+            await page.goto(TARGET_URL, wait_until="networkidle", timeout=35000)
+            print("[+] Page loaded. Triggering user interactions...")
             
-            print("[+] Triggering player interactions...")
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)
 
-            # Auto-click overlay/play button
+            # Try clicking center of screen to trigger player JS
             try:
-                await page.mouse.click(195, 422)  # Screen center click
+                await page.mouse.click(195, 422)
             except Exception:
                 pass
 
-            print("[+] Waiting for network streams...")
-            
-            # Poll for up to 10 seconds until stream request fires
-            for _ in range(10):
+            # Wait up to 15 seconds for m3u8 requests
+            for _ in range(15):
                 if detected_data["m3u8_url"]:
                     break
                 await asyncio.sleep(1)
@@ -70,13 +72,14 @@ async def main():
 
         await browser.close()
 
-        # Output Results
-        if detected_data["m3u8_url"]:
-            with open("extracted_stream.json", "w") as f:
-                json.dump(detected_data, f, indent=4)
-            print("[+] Details saved to 'extracted_stream.json'")
-        else:
-            print("[-] No active .m3u8 request detected.")
+        # Always create the output JSON file so GitHub Artifacts never fails
+        if not detected_data["m3u8_url"]:
+            print("[-] No active .m3u8 found. Outputting fallback status.")
+            detected_data["status"] = "No m3u8 stream detected or channel offline."
+
+        with open("extracted_stream.json", "w") as f:
+            json.dump(detected_data, f, indent=4)
+        print("[+] Output written to 'extracted_stream.json'")
 
 if __name__ == "__main__":
     asyncio.run(main())
