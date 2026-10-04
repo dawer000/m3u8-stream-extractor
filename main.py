@@ -1,88 +1,83 @@
 import asyncio
 import json
-import re
+import time
 from playwright.async_api import async_playwright
 
-# Target streaming page
-TARGET_URL = "https://webcric.im/frame1.htm"
+TARGETS = [
+    {"id": "frame1", "url": "https://webcric.im/frame1.htm"},
+    {"id": "frame2", "url": "https://webcric.im/frame2.htm"}
+]
+
+USER_AGENT = "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36"
+
+async def scrape_channel(browser, target):
+    print(f"[{time.strftime('%H:%M:%S')}] Scraping {target['id']}...")
+    
+    context = await browser.new_context(
+        user_agent=USER_AGENT,
+        viewport={"width": 390, "height": 844},
+        device_scale_factor=3,
+        is_mobile=True,
+        has_touch=True
+    )
+
+    page = await context.new_page()
+    extracted_data = {
+        "m3u8_url": None,
+        "referer": target["url"],
+        "user_agent": USER_AGENT,
+        "updated_at": time.strftime('%Y-%m-%d %H:%M:%S')
+    }
+
+    def on_request(request):
+        url = request.url
+        if ".m3u8" in url and not extracted_data["m3u8_url"]:
+            extracted_data["m3u8_url"] = url
+
+    page.on("request", on_request)
+
+    try:
+        await page.goto(target["url"], wait_until="domcontentloaded", timeout=20000)
+        await asyncio.sleep(1)
+
+        try:
+            await page.mouse.click(195, 422)
+        except Exception:
+            pass
+
+        for _ in range(8):
+            if extracted_data["m3u8_url"]:
+                break
+            await asyncio.sleep(1)
+
+    except Exception as e:
+        print(f"[-] Error on {target['id']}: {e}")
+
+    await context.close()
+    return target["id"], extracted_data
+
+async def run_single_iteration(browser):
+    results = {}
+    for target in TARGETS:
+        channel_id, data = await scrape_channel(browser, target)
+        results[channel_id] = data
+
+    with open("streams.json", "w") as f:
+        json.dump(results, f, indent=4)
+    print(f"[+] Updated streams.json at {time.strftime('%H:%M:%S')}")
 
 async def main():
     async with async_playwright() as p:
-        print("[+] Launching Browser...")
-        
-        # System me installed Chrome use hoga taake Playwright Chromium download error na aaye
         try:
             browser = await p.chromium.launch(headless=True, channel="chrome")
         except Exception:
-            # Fallback to default Playwright browser
             browser = await p.chromium.launch(headless=True)
 
-        # Mobile Device Emulation Settings
-        context = await browser.new_context(
-            user_agent="Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36",
-            viewport={"width": 390, "height": 844},
-            device_scale_factor=3,
-            is_mobile=True,
-            has_touch=True
-        )
-
-        page = await context.new_page()
-        
-        detected_data = {
-            "m3u8_url": None,
-            "referer": "https://webcric.im/",
-            "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36"
-        }
-
-        # Network Traffic Listener (Stream Detector Logic)
-        def on_request(request):
-            url = request.url
-            # Detect .m3u8 index or playlist calls
-            if ".m3u8" in url and not detected_data["m3u8_url"]:
-                detected_data["m3u8_url"] = url
-                print("\n==================================================")
-                print("[SUCCESS] LIVE M3U8 STREAM DETECTED!")
-                print(f"URL: {url}")
-                print("==================================================\n")
-
-        # Network Interceptor Event Attach
-        page.on("request", on_request)
-
-        print(f"[+] Navigating to {TARGET_URL}...")
-        try:
-            # Load page & allow scripts to execute
-            await page.goto(TARGET_URL, wait_until="domcontentloaded", timeout=25000)
-            
-            print("[+] Triggering player interactions...")
-            await asyncio.sleep(2)
-
-            # Auto-click overlay/play button if media player requires tap to stream
-            try:
-                await page.mouse.click(195, 422)  # Screen center click
-            except Exception:
-                pass
-
-            print("[+] Waiting for network streams...")
-            
-            # Poll for up to 10 seconds until stream request fires
-            for i in range(10):
-                if detected_data["m3u8_url"]:
-                    break
-                await asyncio.sleep(1)
-
-        except Exception as e:
-            print(f"[-] Navigation/Timeout notice: {e}")
-
-        await browser.close()
-
-        # Output Results
-        if detected_data["m3u8_url"]:
-            # Save extracted details to a local JSON file
-            with open("extracted_stream.json", "w") as f:
-                json.dump(detected_data, f, indent=4)
-            print("[+] Details saved to 'extracted_stream.json'")
-        else:
-            print("[-] No active .m3u8 request detected. Channel might be offline or stream dynamically obfuscated.")
+        # 1 Minute Loop (Continuous Execution)
+        while True:
+            await run_single_iteration(browser)
+            print("[+] Waiting 60 seconds before next fetch...")
+            await asyncio.sleep(60)
 
 if __name__ == "__main__":
     asyncio.run(main())
