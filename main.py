@@ -38,7 +38,7 @@ async def scrape_channel(browser, target):
 
     try:
         await page.goto(target["url"], wait_until="domcontentloaded", timeout=20000)
-        await asyncio.sleep(1)
+        await asyncio.sleep(2)
 
         try:
             await page.mouse.click(195, 422)
@@ -56,16 +56,6 @@ async def scrape_channel(browser, target):
     await context.close()
     return target["id"], extracted_data
 
-async def run_single_iteration(browser):
-    results = {}
-    for target in TARGETS:
-        channel_id, data = await scrape_channel(browser, target)
-        results[channel_id] = data
-
-    with open("streams.json", "w") as f:
-        json.dump(results, f, indent=4)
-    print(f"[+] Updated streams.json at {time.strftime('%H:%M:%S')}")
-
 async def main():
     async with async_playwright() as p:
         try:
@@ -73,11 +63,17 @@ async def main():
         except Exception:
             browser = await p.chromium.launch(headless=True)
 
-        # 1 Minute Loop (Continuous Execution)
-        while True:
-            await run_single_iteration(browser)
-            print("[+] Waiting 60 seconds before next fetch...")
-            await asyncio.sleep(60)
+        results = {}
+        for target in TARGETS:
+            channel_id, data = await scrape_channel(browser, target)
+            results[channel_id] = data
+
+        await browser.close()
+
+        with open("streams.json", "w") as f:
+            json.dump(results, f, indent=4)
+        
+        print("[+] 'streams.json' successfully updated!")
 
 if __name__ == "__main__":
     asyncio.run(main())
