@@ -1,12 +1,12 @@
-name: Continuous Stream Extractor
+name: Auto Stream Extractor
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '*/5 * * * *'  # Har 5 minute baad trigger hoga
   workflow_dispatch:
 
 jobs:
-  scrape-loop:
+  scrape-job:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -19,24 +19,21 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install playwright
           playwright install chromium --with-deps
 
-      - name: Run Scraper Loop for 4 Minutes
+      - name: Continuous Scrape Loop (4 Runs in 1 Job)
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Runs 4 iterations (60s delay each) within a single Action runner execution
+
           for i in {1..4}
           do
-             python -c "import asyncio, bot; asyncio.run(bot.run_single_iteration_standalone())" || python bot.py &
-             sleep 10
-             python bot.py
-             git add streams.json
-             git diff-index --quiet HEAD || git commit -m "Auto-update streams [1 min sync]"
-             git push
-             echo "Waiting 60 seconds..."
-             sleep 60
+            echo "--- Iteration $i ---"
+            python bot.py
+            git add streams.json
+            git diff-index --quiet HEAD || git commit -m "Auto-update stream links"
+            git push
+            echo "Waiting 60 seconds..."
+            sleep 60
           done
