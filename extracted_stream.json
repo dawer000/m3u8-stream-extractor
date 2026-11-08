@@ -3,12 +3,12 @@
         "m3u8_url": null,
         "referer": "https://webcric.im/frame1.htm",
         "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36",
-        "updated_at": "2026-11-07 23:29:37"
+        "updated_at": "2026-11-08 04:56:29"
     },
     "frame2": {
         "m3u8_url": null,
         "referer": "https://webcric.im/frame2.htm",
         "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36",
-        "updated_at": "2026-11-07 23:29:49"
+        "updated_at": "2026-11-08 04:56:40"
     }
 }
