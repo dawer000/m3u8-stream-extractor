@@ -1,14 +1,14 @@
 {
     "frame1": {
-        "m3u8_url": "https://mu002.myturn1.top:8088/live/webcricn04/playlist.m3u8?id=114607&pk=183d37a143a534f59099c2e09f7e0c9e3208d7617d2c1ef8d7715f036a380383038c4516e83094ab2f0857037b8fd5e1ec9fa155a298157cb08fd341b344cff5",
+        "m3u8_url": "https://mu002.myturn1.top:8088/live/webcricn04/playlist.m3u8?id=114607&pk=c7555b7e6ddd628839913225536e34f6c893bb45b9eb8cc16e7ca7983186231546c85f95608b6dc21464380281aea9a4509922d365769140ff197f69385b2cc8",
         "referer": "https://webcric.im/frame1.htm",
         "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36",
-        "updated_at": "2026-11-19 21:59:43"
+        "updated_at": "2026-11-20 03:00:20"
     },
     "frame2": {
-        "m3u8_url": "https://mu002.myturn1.top:8088/live/webcricn02/playlist.m3u8?id=115656&pk=183d37a143a534f59099c2e09f7e0c9e3208d7617d2c1ef8d7715f036a380383038c4516e83094ab2f0857037b8fd5e1ec9fa155a298157cb08fd341b344cff5",
+        "m3u8_url": "https://mu03.myturn1.top:8088/live/webcricn02/playlist.m3u8?id=115656&pk=c7555b7e6ddd628839913225536e34f6c893bb45b9eb8cc16e7ca7983186231546c85f95608b6dc21464380281aea9a4509922d365769140ff197f69385b2cc8",
         "referer": "https://webcric.im/frame2.htm",
         "user_agent": "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.75 Mobile Safari/537.36",
-        "updated_at": "2026-11-19 21:59:47"
+        "updated_at": "2026-11-20 03:00:26"
     }
 }
